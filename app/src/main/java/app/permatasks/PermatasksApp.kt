@@ -36,9 +36,11 @@ open class PermatasksApp : Application() {
         container = buildContainer()
         Notifier.createChannels(this)
         container.lock.install()
-        if (runBackgroundWork) MaintenanceWorker.schedule(this)
-        // Catch up on anything missed while the process was dead.
-        container.scope.launch { container.repo.processDueNags() }
+        if (runBackgroundWork) {
+            MaintenanceWorker.schedule(this)
+            // Catch up on anything missed while the process was dead.
+            container.scope.launch { container.repo.processDueNags() }
+        }
     }
 }
 
