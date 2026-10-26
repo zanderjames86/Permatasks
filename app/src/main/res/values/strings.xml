@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Permatasks</string>
+    <string name="share_label">Add as task</string>
+    <string name="widget_label">Today\'s tasks</string>
+    <string name="widget_description">Overdue and today\'s tasks. Tick to complete.</string>
+    <string name="tile_label">Add task</string>
+    <string name="shortcut_add">Add task</string>
+    <string name="shortcut_voice">Voice task</string>
+</resources>
