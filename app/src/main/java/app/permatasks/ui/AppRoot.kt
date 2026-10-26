@@ -1,41 +1,47 @@
 package app.permatasks.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,112 +49,226 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import app.permatasks.container
-import app.permatasks.data.ProjectEntity
 import app.permatasks.data.TaskEntity
+import app.permatasks.ui.browse.BrowseContent
+import app.permatasks.ui.browse.FilterEditorScreen
+import app.permatasks.ui.browse.FilterResultsScreen
+import app.permatasks.ui.browse.INBOX
+import app.permatasks.ui.browse.LogbookScreen
+import app.permatasks.ui.browse.ProjectScreen
+import app.permatasks.ui.browse.StatsScreen
+import app.permatasks.ui.components.LocalSnackbar
 import app.permatasks.ui.drive.DriveScreen
 import app.permatasks.ui.lock.LockScreen
 import app.permatasks.ui.lock.PinPad
 import app.permatasks.ui.lock.SetupPinScreen
+import app.permatasks.ui.notes.GraphScreen
+import app.permatasks.ui.notes.NoteEditorScreen
+import app.permatasks.ui.notes.NotesContent
+import app.permatasks.ui.onboarding.OnboardingScreen
+import app.permatasks.ui.search.SearchScreen
+import app.permatasks.ui.settings.BackupScreen
+import app.permatasks.ui.settings.PlacesScreen
 import app.permatasks.ui.settings.SettingsScreen
-import app.permatasks.ui.settings.SetupChecklistCard
-import app.permatasks.ui.settings.rememberSetupItems
 import app.permatasks.ui.tasks.QuickAddPanel
 import app.permatasks.ui.tasks.TaskDetailScreen
-import app.permatasks.ui.tasks.TaskSection
-import app.permatasks.ui.tasks.TaskSections
+import app.permatasks.ui.today.TodayContent
+import app.permatasks.ui.upcoming.UpcomingContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
+import java.net.URLEncoder
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** Deep-link requests coming from notifications and widgets. */
 object PendingNav {
     val taskId = MutableStateFlow<String?>(null)
+    val route = MutableStateFlow<String?>(null)
 }
 
 @Composable
 fun AppRoot() {
     val c = LocalContext.current.container
     val unlocked by c.lock.unlocked.collectAsState()
+    var onboarded by remember { mutableStateOf(c.settings.onboarded || c.pins.isSet) }
     var pinSet by remember { mutableStateOf(c.pins.isSet) }
     when {
+        !onboarded -> OnboardingScreen { c.settings.onboarded = true; onboarded = true }
         !pinSet -> SetupPinScreen(onDone = { pinSet = true })
         !unlocked -> LockScreen()
         else -> MainNav()
     }
 }
 
-private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
-    Today("today", "Today", Icons.Outlined.Today),
-    Upcoming("upcoming", "Upcoming", Icons.Outlined.CalendarMonth),
-    Browse("browse", "Browse", Icons.Outlined.Folder),
+private enum class Tab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
+    Today("today", "Today", Icons.Outlined.Today, Icons.Filled.Today),
+    Upcoming("upcoming", "Upcoming", Icons.Outlined.CalendarMonth, Icons.Filled.CalendarMonth),
+    Browse("browse", "Browse", Icons.Outlined.Folder, Icons.Filled.Folder),
+    Notes("notes", "Notes", Icons.AutoMirrored.Outlined.Notes, Icons.AutoMirrored.Outlined.Notes),
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
 @Composable
 private fun MainNav() {
     val nav = rememberNavController()
-    val pending by PendingNav.taskId.collectAsState()
-    LaunchedEffect(pending) {
-        pending?.let { nav.navigate("task/$it"); PendingNav.taskId.value = null }
-    }
-    NavHost(nav, startDestination = Tab.Today.route) {
-        composable(Tab.Today.route) { TabScaffold(nav, Tab.Today) { TodayContent(nav) } }
-        composable(Tab.Upcoming.route) { TabScaffold(nav, Tab.Upcoming) { UpcomingContent(nav) } }
-        composable(Tab.Browse.route) { TabScaffold(nav, Tab.Browse) { BrowseContent(nav) } }
-        composable("project/{id}") { entry ->
-            val id = entry.arguments?.getString("id")!!
-            ProjectScreen(nav, id.takeIf { it != INBOX })
+    val snackbar = remember { SnackbarHostState() }
+    val pendingTask by PendingNav.taskId.collectAsState()
+    val pendingRoute by PendingNav.route.collectAsState()
+    LaunchedEffect(pendingTask) { pendingTask?.let { nav.navigate("task/$it"); PendingNav.taskId.value = null } }
+    LaunchedEffect(pendingRoute) { pendingRoute?.let { nav.navigate(it); PendingNav.route.value = null } }
+    val openTask: (TaskEntity) -> Unit = { nav.navigate("task/${it.id}") }
+    val slide = AnimatedContentTransitionScope.SlideDirection.Start
+    CompositionLocalProvider(LocalSnackbar provides snackbar) {
+        NavHost(
+            nav, startDestination = Tab.Today.route,
+            enterTransition = { fadeIn(tween(220)) + slideIntoContainer(slide, tween(260), initialOffset = { it / 12 }) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(160)) + slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(240), targetOffset = { it / 12 }) },
+        ) {
+            composable(Tab.Today.route) { TabScaffold(nav, Tab.Today) { TodayContent(openTask) } }
+            composable(Tab.Upcoming.route) { TabScaffold(nav, Tab.Upcoming) { UpcomingContent(openTask) } }
+            composable(Tab.Browse.route) {
+                TabScaffold(nav, Tab.Browse) {
+                    BrowseContent(
+                        onProject = { nav.navigate("project/$it") },
+                        onFilter = { nav.navigate("filter/$it") },
+                        onQuery = { nav.navigate("query/${enc(it)}") },
+                        onNewFilter = { nav.navigate("filteredit/new") },
+                        onLogbook = { nav.navigate("logbook") },
+                        onStats = { nav.navigate("stats") },
+                        onPlaces = { nav.navigate("places") },
+                    )
+                }
+            }
+            composable(Tab.Notes.route) { TabScaffold(nav, Tab.Notes) { NotesContent { nav.navigate("note/$it") } } }
+
+            composable("task/{id}") { e ->
+                TaskDetailScreen(
+                    e.arguments?.getString("id")!!, onBack = { nav.popBackStack() },
+                    onOpenTask = { nav.navigate("task/$it") }, onOpenNote = { nav.navigate("note/$it") },
+                )
+            }
+            composable(
+                "note/{id}?dictate={dictate}",
+                arguments = listOf(navArgument("dictate") { type = NavType.BoolType; defaultValue = false }),
+            ) { e ->
+                NoteEditorScreen(
+                    e.arguments?.getString("id")!!, e.arguments?.getBoolean("dictate") ?: false,
+                    onBack = { nav.popBackStack() },
+                    onOpenNote = { nav.navigate("note/$it") },
+                    onOpenTask = { nav.navigate("task/$it") },
+                )
+            }
+            composable("project/{id}") { e ->
+                var adding by remember { mutableStateOf<Pair<String?, String?>?>(null) }
+                val id = e.arguments?.getString("id")!!.takeIf { it != INBOX }
+                ProjectScreen(id, onBack = { nav.popBackStack() }, onOpen = openTask, onAdd = { p, s -> adding = p to s })
+                adding?.let { (p, s) -> QuickAddSheet(p, s) { adding = null } }
+            }
+            composable("filter/{id}") { e ->
+                FilterResultsScreen(e.arguments?.getString("id"), null, { nav.popBackStack() }, openTask) { nav.navigate("filteredit/$it") }
+            }
+            composable("query/{q}") { e ->
+                FilterResultsScreen(null, java.net.URLDecoder.decode(e.arguments?.getString("q") ?: "", "UTF-8"), { nav.popBackStack() }, openTask) {}
+            }
+            composable("filteredit/{id}") { e -> FilterEditorScreen(e.arguments?.getString("id")?.takeIf { it != "new" }) { nav.popBackStack() } }
+            composable("logbook") { LogbookScreen({ nav.popBackStack() }, openTask) }
+            composable("stats") { StatsScreen { nav.popBackStack() } }
+            composable("places") { PlacesScreen { nav.popBackStack() } }
+            composable("graph") { GraphScreen({ nav.popBackStack() }) { nav.navigate("note/$it") } }
+            composable("search") { SearchScreen({ nav.popBackStack() }, openTask) { nav.navigate("note/$it") } }
+            composable("settings") {
+                SettingsScreen(
+                    onBack = { nav.popBackStack() }, onChangePin = { nav.navigate("changepin") },
+                    onBackup = { nav.navigate("backup") }, onPlaces = { nav.navigate("places") },
+                )
+            }
+            composable("backup") { BackupScreen { nav.popBackStack() } }
+            composable("changepin") { ChangePin(onDone = { nav.popBackStack() }) }
+            composable("drive") { DriveScreen(onExit = { nav.popBackStack() }) }
         }
-        composable("task/{id}") { entry ->
-            TaskDetailScreen(entry.arguments?.getString("id")!!, onBack = { nav.popBackStack() }, onOpenTask = { nav.navigate("task/$it") })
-        }
-        composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }, onChangePin = { nav.navigate("changepin") }) }
-        composable("changepin") { ChangePin(onDone = { nav.popBackStack() }) }
-        composable("drive") { DriveScreen(onExit = { nav.popBackStack() }) }
-        composable("logbook") { LogbookScreen(nav) }
     }
 }
-
-private const val INBOX = "inbox"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TabScaffold(nav: NavHostController, tab: Tab, content: @Composable () -> Unit) {
+    val c = LocalContext.current.container
+    val scope = rememberCoroutineScope()
     var adding by remember { mutableStateOf(false) }
     val current by nav.currentBackStackEntryAsState()
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    @Suppress("UNUSED_VARIABLE") val tick by c.settings.changes.collectAsState()
+
+    fun newNote(dictate: Boolean) = scope.launch {
+        val note = withContext(Dispatchers.IO) { c.notes.create() }
+        nav.navigate("note/${note.id}?dictate=$dictate")
+    }
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(LocalSnackbar.current) },
         topBar = {
-            TopAppBar(
-                title = { Text(tab.label) },
+            LargeTopAppBar(
+                title = {
+                    Column {
+                        Text(tab.label)
+                        if (tab == Tab.Today && scroll.state.collapsedFraction < 0.5f) {
+                            Text(
+                                LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, d MMMM")),
+                                style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                },
                 actions = {
-                    IconButton(onClick = { nav.navigate("drive") }) { Icon(Icons.Outlined.DirectionsCar, "Drive mode") }
+                    IconButton(onClick = { nav.navigate("search") }) { Icon(Icons.Outlined.Search, "Search") }
+                    if (tab == Tab.Notes) {
+                        IconButton(onClick = { nav.navigate("graph") }) { Icon(Icons.Outlined.Hub, "Graph") }
+                        IconButton(onClick = { c.settings.notesGrid = !c.settings.notesGrid }) {
+                            Icon(if (c.settings.notesGrid) Icons.Outlined.ViewAgenda else Icons.Outlined.GridView, "Layout")
+                        }
+                    } else {
+                        IconButton(onClick = { nav.navigate("drive") }) { Icon(Icons.Outlined.DirectionsCar, "Drive mode") }
+                    }
                     IconButton(onClick = { nav.navigate("settings") }) { Icon(Icons.Outlined.Settings, "Settings") }
                 },
+                scrollBehavior = scroll,
             )
         },
-        floatingActionButton = { FloatingActionButton(onClick = { adding = true }) { Icon(Icons.Filled.Add, "Add task") } },
+        floatingActionButton = {
+            if (tab == Tab.Notes) {
+                Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
+                    SmallFloatingActionButton(onClick = { newNote(true) }, modifier = Modifier.padding(bottom = 12.dp)) { Icon(Icons.Outlined.Mic, "Voice note") }
+                    ExtendedFloatingActionButton(onClick = { newNote(false) }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("New note") })
+                }
+            } else {
+                ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Add task") })
+            }
+        },
         bottomBar = {
             NavigationBar {
                 Tab.entries.forEach { t ->
+                    val selected = current?.destination?.route == t.route
                     NavigationBarItem(
-                        selected = current?.destination?.route == t.route,
+                        selected = selected,
                         onClick = {
                             nav.navigate(t.route) {
                                 popUpTo(Tab.Today.route) { saveState = true }
@@ -156,204 +276,28 @@ private fun TabScaffold(nav: NavHostController, tab: Tab, content: @Composable (
                                 restoreState = true
                             }
                         },
-                        icon = { Icon(t.icon, null) },
+                        icon = { Icon(if (selected) t.selectedIcon else t.icon, null) },
                         label = { Text(t.label) },
                     )
                 }
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding)) { content() }
+        Box(Modifier.padding(padding)) { content() }
     }
-    if (adding) QuickAddSheet(null) { adding = false }
+    if (adding) QuickAddSheet(null, null) { adding = false }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickAddSheet(projectId: String?, onClose: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.imePadding().padding(bottom = 16.dp)) {
-            QuickAddPanel(defaultProjectId = projectId, onAdded = {})
-        }
-    }
-}
-
-@Composable
-private fun rememberProjects(): Map<String, ProjectEntity> {
-    val repo = LocalContext.current.container.repo
-    val list by remember { repo.projects.observeAll() }.collectAsState(initial = emptyList())
-    return remember(list) { list.associateBy { it.id } }
-}
-
-@Composable
-private fun rememberOpenTasks(): List<TaskEntity> {
-    val repo = LocalContext.current.container.repo
-    val list by remember { repo.tasks.observeOpen() }.collectAsState(initial = emptyList())
-    return list
-}
-
-@Composable
-private fun TodayContent(nav: NavHostController) {
-    val repo = LocalContext.current.container.repo
-    val tasks = rememberOpenTasks().filter { it.parentId == null }
-    val projects = rememberProjects()
-    val setup = rememberSetupItems()
-    val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
-    val endOfToday = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-    val startOfToday = today.atStartOfDay(zone).toInstant().toEpochMilli()
-    val overdue = tasks.filter { t -> t.dueAt != null && (if (t.hasTime) t.dueAt < System.currentTimeMillis() && t.dueAt < endOfToday else t.dueAt < startOfToday) }
-    val dueToday = tasks.filter { it.dueAt != null && it.dueAt < endOfToday && it !in overdue }
-    TaskSections(
-        sections = listOf(
-            TaskSection("Overdue", overdue, highlight = true),
-            TaskSection(today.format(DateTimeFormatter.ofPattern("EEE d MMM")) + " · Today", dueToday),
-        ),
-        projects = projects,
-        onOpen = { nav.navigate("task/${it.id}") },
-        onComplete = { repo.complete(it.id) },
-        empty = "Nothing due today. Tap + to add a task.",
-        header = { item { SetupChecklistCard(setup) } },
-    )
-}
-
-@Composable
-private fun UpcomingContent(nav: NavHostController) {
-    val repo = LocalContext.current.container.repo
-    val tasks = rememberOpenTasks().filter { it.parentId == null }
-    val projects = rememberProjects()
-    val zone = ZoneId.systemDefault()
-    val today = LocalDate.now(zone)
-    val byDay = tasks.filter { it.dueAt != null }.groupBy { Instant.ofEpochMilli(it.dueAt!!).atZone(zone).toLocalDate() }
-    val sections = buildList {
-        add(TaskSection("Overdue", byDay.filterKeys { it.isBefore(today) }.values.flatten(), highlight = true))
-        for (i in 0 until 14) {
-            val d = today.plusDays(i.toLong())
-            val label = when (i) {
-                0 -> "Today"
-                1 -> "Tomorrow"
-                else -> d.format(DateTimeFormatter.ofPattern("EEEE d MMM"))
-            }
-            add(TaskSection(label, byDay[d].orEmpty()))
-        }
-        add(TaskSection("Later", byDay.filterKeys { it.isAfter(today.plusDays(13)) }.values.flatten()))
-        add(TaskSection("No date", tasks.filter { it.dueAt == null }))
-    }
-    TaskSections(sections, projects, { nav.navigate("task/${it.id}") }, { repo.complete(it.id) }, "No tasks yet.")
-}
-
-@Composable
-private fun BrowseContent(nav: NavHostController) {
-    val repo = LocalContext.current.container.repo
-    val scope = rememberCoroutineScope()
-    val tasks = rememberOpenTasks()
-    val projects by remember { repo.projects.observeAll() }.collectAsState(initial = emptyList())
-    var newProject by remember { mutableStateOf<String?>(null) }
-    LazyColumn {
-        item {
-            BrowseRow(Icons.Outlined.Inbox, "Inbox", tasks.count { it.projectId == null && it.parentId == null }, null) { nav.navigate("project/$INBOX") }
-        }
-        items(projects, key = { it.id }) { p ->
-            BrowseRow(Icons.Outlined.Folder, p.name, tasks.count { it.projectId == p.id && it.parentId == null }, Color(p.color)) {
-                nav.navigate("project/${p.id}")
-            }
-        }
-        item { TextButton(onClick = { newProject = "" }, modifier = Modifier.padding(8.dp)) { Text("+ New project") } }
-        item { BrowseRow(Icons.Outlined.History, "Completed & closed", null, null) { nav.navigate("logbook") } }
-    }
-    newProject?.let { name ->
-        AlertDialog(
-            onDismissRequest = { newProject = null },
-            title = { Text("New project") },
-            text = { OutlinedTextField(name, { newProject = it }, singleLine = true) },
-            confirmButton = {
-                TextButton(onClick = {
-                    val n = name.trim()
-                    if (n.isNotEmpty()) scope.launch { repo.projects.upsert(ProjectEntity(name = n, color = PROJECT_COLORS[projects.size % PROJECT_COLORS.size])) }
-                    newProject = null
-                }) { Text("Create") }
-            },
-            dismissButton = { TextButton(onClick = { newProject = null }) { Text("Cancel") } },
-        )
-    }
-}
-
-private val PROJECT_COLORS = listOf(0xFF7E57C2, 0xFF26A69A, 0xFFEF5350, 0xFF42A5F5, 0xFFFFA726, 0xFF8D6E63, 0xFFEC407A, 0xFF66BB6A)
-
-@Composable
-private fun BrowseRow(icon: ImageVector, title: String, count: Int?, tint: Color?, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+fun QuickAddSheet(projectId: String?, sectionId: String?, onClose: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        Icon(icon, null, tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-        count?.let { Text("$it", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ProjectScreen(nav: NavHostController, projectId: String?) {
-    val repo = LocalContext.current.container.repo
-    val scope = rememberCoroutineScope()
-    val projects = rememberProjects()
-    val project = projectId?.let { projects[it] }
-    val tasks = rememberOpenTasks().filter { it.projectId == projectId && it.parentId == null }
-    var adding by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(project?.name ?: "Inbox") },
-                navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-                actions = { if (project != null) TextButton(onClick = { confirmDelete = true }) { Text("Delete") } },
-            )
-        },
-        floatingActionButton = { FloatingActionButton(onClick = { adding = true }) { Icon(Icons.Filled.Add, "Add task") } },
-    ) { padding ->
-        Column(Modifier.padding(padding)) {
-            TaskSections(
-                listOf(
-                    TaskSection("Scheduled", tasks.filter { it.dueAt != null }),
-                    TaskSection("No date", tasks.filter { it.dueAt == null }),
-                ),
-                projects, { nav.navigate("task/${it.id}") }, { repo.complete(it.id) }, "No open tasks here.",
-            )
-        }
-    }
-    if (adding) QuickAddSheet(projectId) { adding = false }
-    if (confirmDelete && project != null) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Delete ${project.name}?") },
-            text = { Text("Its tasks are kept and moved to the Inbox.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    scope.launch { repo.projects.detachTasks(project.id); repo.projects.delete(project) }
-                    nav.popBackStack()
-                }) { Text("Delete") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LogbookScreen(nav: NavHostController) {
-    val repo = LocalContext.current.container.repo
-    val closed by remember { repo.tasks.observeClosed() }.collectAsState(initial = emptyList())
-    val projects = rememberProjects()
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Completed & closed") },
-            navigationIcon = { IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
-        )
-    }) { padding ->
-        Column(Modifier.padding(padding)) {
-            TaskSections(listOf(TaskSection("Recently closed", closed)), projects, { nav.navigate("task/${it.id}") }, {}, "Nothing completed yet.")
+        Column(Modifier.imePadding().padding(bottom = 8.dp)) {
+            QuickAddPanel(defaultProjectId = projectId, sectionId = sectionId, onAdded = {})
         }
     }
 }

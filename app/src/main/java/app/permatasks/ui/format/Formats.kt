@@ -46,6 +46,11 @@ object Formats {
         return if (hasTime) "Overdue by $ago ($base)" else "Overdue ($base)"
     }
 
+    fun dayOffset(ms: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+        ChronoUnit.DAYS.between(LocalDate.now(zone), Instant.ofEpochMilli(ms).atZone(zone).toLocalDate())
+
+    fun time(ms: Long, zone: ZoneId = ZoneId.systemDefault()): String = Instant.ofEpochMilli(ms).atZone(zone).format(time)
+
     fun isOverdue(ms: Long, hasTime: Boolean, now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): Boolean =
         if (hasTime) ms < now else Instant.ofEpochMilli(ms).atZone(zone).toLocalDate().isBefore(LocalDate.now(zone))
 }

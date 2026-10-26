@@ -61,6 +61,48 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("speak_nags", false)
         set(v) = edit { putBoolean("speak_nags", v) }
 
+    var carAddress: String?
+        get() = prefs.getString("car_address", null)
+        set(v) = edit { putString("car_address", v) }
+
+    var carName: String?
+        get() = prefs.getString("car_name", null)
+        set(v) = edit { putString("car_name", v) }
+
+    var onboarded: Boolean
+        get() = prefs.getBoolean("onboarded", false)
+        set(v) = edit { putBoolean("onboarded", v) }
+
+    /** 0 = follow system, 1 = light, 2 = dark. */
+    var themeMode: Int
+        get() = prefs.getInt("theme_mode", 0)
+        set(v) = edit { putInt("theme_mode", v) }
+
+    /** "dynamic" (wallpaper) or one of the built-in palettes. */
+    var palette: String
+        get() = prefs.getString("palette", "dynamic") ?: "dynamic"
+        set(v) = edit { putString("palette", v) }
+
+    var autoBackup: Boolean
+        get() = prefs.getBoolean("auto_backup", false)
+        set(v) = edit { putBoolean("auto_backup", v) }
+
+    var backupUri: String?
+        get() = prefs.getString("backup_uri", null)
+        set(v) = edit { putString("backup_uri", v) }
+
+    var lastBackupAt: Long
+        get() = prefs.getLong("last_backup", 0)
+        set(v) = edit { putLong("last_backup", v) }
+
+    var lastBackupError: String?
+        get() = prefs.getString("last_backup_error", null)
+        set(v) = edit { putString("last_backup_error", v) }
+
+    var notesGrid: Boolean
+        get() = prefs.getBoolean("notes_grid", true)
+        set(v) = edit { putBoolean("notes_grid", v) }
+
     fun policy(priority: Priority): NagPolicy {
         val d = NagPolicy.default(priority)
         val k = priority.name.lowercase()

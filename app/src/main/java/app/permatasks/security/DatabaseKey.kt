@@ -23,25 +23,40 @@ import javax.crypto.spec.GCMParameterSpec
 object DatabaseKey {
     private const val ALIAS = "permatasks_db_kek"
     private const val PREFS = "permatasks_keys"
-    private const val PREF_WRAPPED = "db_key"
 
-    @Volatile private var cached: ByteArray? = null
+    private val cache = mutableMapOf<String, ByteArray>()
 
+    fun passphrase(context: Context): ByteArray = secret(context, "db_key")
+
+    /**
+     * A random 256-bit secret named [name], created on first use and stored only in wrapped
+     * form. Used for the database, the encrypted file vault and the backup key.
+     */
     @Synchronized
-    fun passphrase(context: Context): ByteArray {
-        cached?.let { return it.copyOf() }
+    fun secret(context: Context, name: String): ByteArray {
+        cache[name]?.let { return it.copyOf() }
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val stored = prefs.getString(PREF_WRAPPED, null)
+        val stored = prefs.getString(name, null)
         val key = if (stored != null) {
             unwrap(Base64.decode(stored, Base64.NO_WRAP))
         } else {
-            ByteArray(32).also { SecureRandom().nextBytes(it) }.also { raw ->
-                prefs.edit().putString(PREF_WRAPPED, Base64.encodeToString(wrap(raw), Base64.NO_WRAP)).commit()
-            }
+            ByteArray(32).also { SecureRandom().nextBytes(it) }.also { store(context, name, it) }
         }
-        cached = key
+        cache[name] = key
         return key.copyOf()
     }
+
+    /** Stores caller-provided key material (e.g. a passphrase-derived backup key). */
+    @Synchronized
+    fun store(context: Context, name: String, raw: ByteArray) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(name, Base64.encodeToString(wrap(raw), Base64.NO_WRAP)).commit()
+        cache[name] = raw.copyOf()
+    }
+
+    @Synchronized
+    fun has(context: Context, name: String): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(name)
 
     private fun keystoreKey(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }

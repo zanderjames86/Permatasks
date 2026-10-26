@@ -27,9 +27,11 @@ class MainActivity : FragmentActivity() {
 
     private fun handle(intent: Intent?) {
         intent?.getStringExtra(EXTRA_TASK_ID)?.let { PendingNav.taskId.value = it }
+        if (intent?.getBooleanExtra(EXTRA_DRIVE, false) == true) PendingNav.route.value = "drive"
     }
 
     companion object {
         const val EXTRA_TASK_ID = "task_id"
+        const val EXTRA_DRIVE = "drive"
     }
 }

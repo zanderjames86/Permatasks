@@ -23,8 +23,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit tests
+      - name: Tests (logic, nag engine, encryption, UI screenshots)
         run: ./gradlew :app:testDebugUnitTest --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: app/build/screenshots/
 
       - name: Decode signing key
         env:

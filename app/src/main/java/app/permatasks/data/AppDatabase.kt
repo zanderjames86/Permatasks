@@ -8,7 +8,10 @@ import app.permatasks.security.DatabaseKey
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
-    entities = [TaskEntity::class, ProjectEntity::class, ActivityEntity::class],
+    entities = [
+        TaskEntity::class, ProjectEntity::class, ActivityEntity::class, SectionEntity::class,
+        FilterEntity::class, PlaceEntity::class, NoteEntity::class, NoteLinkEntity::class,
+    ],
     version = 1,
     exportSchema = true,
 )
@@ -16,6 +19,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tasks(): TaskDao
     abstract fun projects(): ProjectDao
     abstract fun activity(): ActivityDao
+    abstract fun sections(): SectionDao
+    abstract fun filters(): FilterDao
+    abstract fun places(): PlaceDao
+    abstract fun notes(): NoteDao
 
     companion object {
         /** The whole database file is encrypted with SQLCipher (AES-256). */

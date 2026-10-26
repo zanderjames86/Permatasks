@@ -1,95 +1,98 @@
 # Permatasks
 
-A private, offline task manager for Android that **keeps reminding you until you actually close the task**.
-Built for a Pixel 8 Pro (Android 14+), installed as an APK, no Play Store, no account, no cloud.
+A private, offline task manager and notebook for Android whose reminders **keep coming back until you actually close the task**.
+Built for a Pixel 8 Pro (Android 14+). It's installed as an APK, with no Play Store, no account and no cloud.
 
-## What it does today (Phase 1)
+<p>
+<img src="docs/screenshots/03_today.png" width="200"> <img src="docs/screenshots/07_task_detail.png" width="200"> <img src="docs/screenshots/09_note.png" width="200">
+<img src="docs/screenshots/06_project.png" width="200"> <img src="docs/screenshots/30_nag_fullscreen.png" width="200"> <img src="docs/screenshots/20_today_dark.png" width="200">
+</p>
 
-**Nagging that doesn't give up**
-- A task with a date stays an open loop until you answer: **Done**, **Snooze** (10m … tomorrow morning),
-  **Move to another date**, **Skip this time** (recurring) or **Won't do**.
-- Swiping the notification away doesn't count as an answer: it comes straight back, silently.
-- Escalation per priority (configurable): e.g. P1 re-nags every 5 min and, after 2 ignored reminders,
-  takes over the screen like an alarm clock, with a looping alarm sound.
-- Follows **Bedtime mode / Do Not Disturb**: reminders wait while it's on and all come back when it ends.
-  Optional extra quiet hours; optional "P1 breaks through".
-- Exact alarms (unaffected by Doze), re-armed after reboot, app update and time-zone changes.
-- Each reminder shows how often you've been reminded and how many times you've snoozed.
+## Features
 
-**Tasks**
-- Quick add in plain English: `Call mom tomorrow 6pm p1 #Family @phone`,
-  `Stand-up every weekday 9:30am`, `Water plants every! 3 days`, `Dentist 3 nov`, `Check oven in 20 minutes`.
-- Projects, sub-tasks, labels, priorities P1–P4, date-only or timed due dates, "start nagging early".
-- Repeats: daily / weekdays / weekly on chosen days / every N days-weeks-months-years / from completion (`every!`).
-- Today (with overdue), Upcoming (14 days + later + no date), Browse projects, Completed log, per-task history.
+### Nagging that doesn't give up
+- **A task stays open until you answer.** A task with a date or trigger keeps reminding you until you choose one of:
+  - **Done**
+  - **Snooze**
+  - **Move to another date**
+  - **Skip this time** (repeating tasks)
+  - **Won't do**
+- **Swiping doesn't count.** If you swipe the notification away, it comes straight back, silently.
+- **It escalates per priority (configurable).** P1 re-nags every 5 minutes. After 2 ignored reminders it takes over the screen like an alarm clock, with a looping alarm sound.
+- **It follows Bedtime mode / Do Not Disturb.** Reminders wait while it's on and all come back when it ends. You can also set extra quiet hours, and choose to let P1 break through.
+- **Reliable timing.** It uses exact alarms (not delayed by Doze) and re-arms them after a reboot, an app update or a time-zone change. A background safety check runs every 4 hours.
+- **It keeps score.** Reminders show how often you've been reminded and snoozed.
 
-**Everywhere on the phone**
-- Home-screen widget: overdue + today, tick to complete, `+` to add.
-- Quick Settings tile, long-press app shortcuts (Add task / Voice task), and **Share → Add as task** from any app.
-- Voice entry using the **on-device** recogniser only (audio never leaves the phone).
+### Tasks (Todoist-level, including Todoist's paid features)
+- **Quick add in plain English:**
+  - `Call mom tomorrow 6pm p1 #Family @phone`
+  - `Stand-up every weekday 9:30am`
+  - `Water plants every! 3 days`
+  - `Dentist 3 nov`
+- **Organising:** projects with sections, sub-tasks, labels, priorities P1–P4, dated or timed due dates, and "start reminding early".
+- **Repeats:** daily, weekdays, chosen days, every N days/weeks/months/years, or counted from completion.
+- **Views:**
+  - **Today:** overdue, triggered and today's tasks, plus a progress ring.
+  - **Upcoming:** a list or a month calendar that also shows your phone's calendar events.
+  - **Projects:** a list or a **Kanban board**.
+  - **Filters:** saved queries such as `(today | overdue) & p1 & !#Work`, plus labels.
+  - **Other:** search, a completed log, a per-task activity history, and productivity stats (streaks, last 14 days).
+- **Gestures:** swipe right to complete (with Undo) or swipe left to reschedule.
 
-**Driving**
-- Drive mode: huge buttons, current task with Done / In 1 hour, voice add with spoken confirmation,
-  "Read out" today's tasks.
-- Optional: reminders read aloud while Bluetooth audio (your car) is connected.
+### Context triggers
+- **Location:** remind when you arrive at or leave a saved place. Uses Google Play Services geofencing; places are found by address search or your current location.
+- **Bluetooth:** remind when a device connects, e.g. when you get in the car.
+- **Calendar event:** the task's due time follows an event, even if the event moves.
+- **Dependencies:** a task stays quiet until another task is done, then starts nagging.
 
-**Security & privacy**
-- The APK has **no INTERNET permission** (enforced in the manifest and checked in CI). It cannot send data anywhere.
-- Database encrypted with SQLCipher (AES-256); its key is sealed by the Android Keystore (StrongBox / Titan M2).
-- PIN on every start + fingerprint / face unlock; lockout after repeated wrong PINs; relock timeout.
-- Screenshots and recent-apps previews blocked; task names hidden on the lock screen by default.
-- Android cloud backup and device-transfer disabled. No analytics, no Google services.
+### Notes (Notion/Obsidian style)
+- **Blocks:** headings, text, bullets, numbered lists, quotes, callouts, code, dividers and images. You can type shortcuts like `# `, `- `, `[] `, `> `.
+- **Checklists that nag:** "+ remind me" turns an item into a real task. Ticking it in either place completes both.
+- **Links:** `[[Wiki links]]` between notes (missing notes are created on tap), backlinks, and a graph view.
+- **Dictation:** voice dictation and voice notes, recognised on the phone.
+- **Organising:** pin notes and switch between grid and list. Notes can be shared as Markdown.
 
-## Roadmap
+### Everywhere on the phone
+- A home-screen widget (tick to complete, + to add).
+- A Quick Settings tile and launcher shortcuts.
+- **Share → Add as task** from any app.
 
-| Phase | Scope |
-|---|---|
-| 2 | Saved filters (`overdue & p1 & #work`), board view, calendar view, templates, more widgets, stats |
-| 3 | Location reminders (Google Play Services geofencing), calendar-event triggers, Bluetooth/Wi-Fi triggers, task dependencies, Android Auto |
-| 4 | Notes: block editor, images, checklists whose items nag, `[[wiki links]]`, backlinks, graph, voice notes |
-| 5 | Encrypted backup/restore (passphrase, written to Drive/OneDrive through the system file picker) |
-| Later | Optional self-hosted web companion and shared family lists (ids are already UUIDs for sync) |
+### Driving
+- **Drive mode:** huge buttons, voice add with a spoken confirmation, and today's tasks read aloud.
+- **Pick your car:** when it connects, you get a Drive mode card and a spoken summary.
+- **Read-aloud reminders:** reminders are read out while Bluetooth audio is connected.
 
-## Getting the APK
+### Security & privacy
+- **No internet.** The APK has **no INTERNET permission**; this is enforced in the manifest and checked by CI.
+- **Encrypted storage.** The database is encrypted with SQLCipher (AES-256), and images with AES-GCM. The keys are sealed in the Android Keystore (Titan M2).
+- **App lock.** A PIN plus fingerprint/face on start, with a lockout after wrong PINs and a configurable relock time.
+- **Nothing leaks from the screen.** Screenshots and recent-apps previews are blocked, and task names are hidden on the lock screen.
+- **No cloud backup or tracking.** Android cloud backup and device transfer are disabled. There's no analytics and no tracking.
 
-Every push builds `app-release.apk` in GitHub Actions (**Actions → Build APK → latest run → Artifacts**).
-Pushing a tag like `v0.1.0` also attaches it to a GitHub Release.
+### Encrypted backup
+- **Encrypted with your passphrase.** Backups use AES-256-GCM with a key derived from a passphrase only you know (PBKDF2-SHA256, 310k iterations).
+- **Saved through the system file picker.** Choose Google Drive, OneDrive or a folder; that app does the upload, so Permatasks stays offline.
+- **Automatic.** A daily backup overwrites the same file. You can also export a one-off backup.
+- **Restore** works on a new phone with only the backup file and the passphrase.
 
-### One-time: set up a permanent signing key (important)
+## Install
 
-Android only installs an update over an existing app if both are signed with the **same key**.
-Without your own key, CI signs with a throwaway debug key, so each new build would need an uninstall
-(which deletes your tasks). Create a key once and store it as repository secrets:
+1. **Signing secrets** (one time): add the four values from your signing-key file under
+   *GitHub → Settings → Secrets and variables → Actions*: `PERMATASKS_KEY_ALIAS`, `PERMATASKS_KEYSTORE_PASSWORD`,
+   `PERMATASKS_KEY_PASSWORD` and `PERMATASKS_KEYSTORE_BASE64`. Every build is then signed with your key, so updates install over the top without losing data.
+2. **Download the APK:** *Actions → Build APK → latest run → Artifacts → permatasks-apk*. Pushing a tag like `v1.0.0` also creates a Release.
+3. **Install it:** open the APK on the phone and allow "install unknown apps" for your browser or Files app.
+4. **Set it up:** go through the intro, choose a PIN and enable fingerprint/face, then tap **Finish setup → Fix** for each item.
+5. **Optional:**
+   - Add the widget and the Quick Settings tile.
+   - Set your car under Settings → Driving.
+   - Set up the encrypted backup under Settings → Backup.
+
+## Development
 
 ```bash
-keytool -genkeypair -v -keystore permatasks.jks -alias permatasks -keyalg RSA -keysize 4096 -validity 10000
-base64 -w0 permatasks.jks > permatasks.jks.b64
-```
-
-Then in **GitHub → Settings → Secrets and variables → Actions** add:
-
-| Secret | Value |
-|---|---|
-| `PERMATASKS_KEYSTORE_BASE64` | contents of `permatasks.jks.b64` |
-| `PERMATASKS_KEYSTORE_PASSWORD` | keystore password |
-| `PERMATASKS_KEY_ALIAS` | `permatasks` |
-| `PERMATASKS_KEY_PASSWORD` | key password |
-
-Keep `permatasks.jks` safe somewhere private; never commit it.
-
-### Install on the phone
-
-1. Download the APK on the phone, open it, allow "install unknown apps" for your browser / Files.
-2. Open Permatasks, choose a PIN, enable fingerprint/face.
-3. Tap **Fix** on each item of the setup card (notifications, full-screen alarms, exact alarms, battery).
-4. For voice: Settings → System → Languages → Speech → make sure the English offline/on-device pack is installed.
-5. Long-press the home screen → Widgets → Permatasks to add the widget; edit Quick Settings to add the tile.
-
-## Building locally
-
-```bash
-./gradlew :app:testDebugUnitTest   # parser, recurrence and scheduling tests
+./gradlew :app:testDebugUnitTest   # 48 tests: parser, filters, nag engine, encryption, + screenshots in app/build/screenshots
 ./gradlew :app:assembleRelease     # app/build/outputs/apk/release/app-release.apk
 ```
 
-Kotlin, Jetpack Compose (Material 3), Room + SQLCipher, Glance widgets, AlarmManager. minSdk 34, targetSdk 36.
+Built with Kotlin, Jetpack Compose (Material 3), Room + SQLCipher, WorkManager, Glance, AlarmManager and Play Services geofencing. minSdk 34, targetSdk 36.

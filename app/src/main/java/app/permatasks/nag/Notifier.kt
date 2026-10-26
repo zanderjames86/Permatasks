@@ -89,6 +89,25 @@ class Notifier(private val context: Context, private val settings: Settings) {
 
     fun cancel(taskId: String) = manager.cancel(notificationId(taskId))
 
+    /** "Car connected" card with a one-tap way into Drive mode. */
+    fun showCarConnected(dueToday: Int) {
+        val open = PendingIntent.getActivity(
+            context, CAR_ID,
+            Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_DRIVE, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val n = NotificationCompat.Builder(context, CHANNEL_GENERAL)
+            .setSmallIcon(R.drawable.ic_stat_task)
+            .setContentTitle("Car connected")
+            .setContentText(if (dueToday == 0) "Nothing due today" else "$dueToday tasks due today · tap for Drive mode")
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .setTimeoutAfter(30 * 60_000L)
+            .build()
+        manager.notify(CAR_ID, n)
+    }
+
     fun isShowing(taskId: String): Boolean = manager.activeNotifications.any { it.id == notificationId(taskId) }
 
     private fun openTask(taskId: String) = PendingIntent.getActivity(
@@ -123,6 +142,8 @@ class Notifier(private val context: Context, private val settings: Settings) {
         const val CHANNEL_NAG = "nag"
         const val CHANNEL_URGENT = "nag_urgent"
         const val CHANNEL_SILENT = "nag_silent"
+        const val CHANNEL_GENERAL = "general"
+        private const val CAR_ID = 4242
 
         fun createChannels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java)
@@ -151,7 +172,10 @@ class Notifier(private val context: Context, private val settings: Settings) {
                 description = "A reminder you swiped away, put back quietly"
                 setShowBadge(true)
             }
-            nm.createNotificationChannels(listOf(nag, urgent, silent))
+            val general = NotificationChannel(CHANNEL_GENERAL, "General", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "Car connected, backups and other information"
+            }
+            nm.createNotificationChannels(listOf(nag, urgent, silent, general))
         }
     }
 }

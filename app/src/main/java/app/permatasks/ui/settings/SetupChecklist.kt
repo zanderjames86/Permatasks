@@ -16,7 +16,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -24,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,19 +84,38 @@ private fun setupItems(context: Context, requestNotifications: () -> Unit): List
 fun SetupChecklistCard(items: List<SetupItem>) {
     val missing = items.filter { !it.ok }
     if (missing.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
     Card(
-        Modifier.fillMaxWidth().padding(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Finish setup so reminders can't be missed", style = MaterialTheme.typography.titleSmall)
-            missing.forEach { item ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(item.title, style = MaterialTheme.typography.bodyMedium)
-                        Text(item.why, style = MaterialTheme.typography.bodySmall)
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.ErrorOutline, null, tint = MaterialTheme.colorScheme.error)
+                Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                    Text("Finish setup", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "${missing.size} setting${if (missing.size > 1) "s" else ""} could stop reminders reaching you",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = { if (missing.size == 1) missing.first().fix() else expanded = !expanded }) {
+                    Text(if (missing.size == 1) "Fix" else if (expanded) "Hide" else "Review")
+                }
+            }
+            if (expanded) {
+                missing.forEach { item ->
+                    Row(Modifier.padding(start = 56.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+                            Text(item.title, style = MaterialTheme.typography.bodyMedium)
+                            Text(item.why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        TextButton(onClick = item.fix) { Text("Fix") }
                     }
-                    TextButton(onClick = item.fix) { Text("Fix") }
                 }
             }
         }
